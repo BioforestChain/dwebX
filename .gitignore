@@ -20,3 +20,7 @@ debug
 /kotlin-js-store/
 *.provisionprofile
 .upload-tasks.ts
+
+*/src/*/composeResources/
+*/src/*/resources/
+

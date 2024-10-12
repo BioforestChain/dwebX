@@ -3,12 +3,12 @@ package info.bagen.dwebbrowser
 import android.app.Application
 import android.content.Context
 import android.webkit.WebView
+import com.dweb.dapp.AppLauncher
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import org.dweb_browser.browser.AppLauncher
 import org.dweb_browser.core.std.dns.DnsNMM
 import org.dweb_browser.helper.androidAppContextDeferred
 import org.dweb_browser.helper.compose.ENV_SWITCH_KEY

@@ -1,4 +1,4 @@
-package org.dweb_browser.browser.jmm
+package com.dweb.dapp
 
 import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.CompletableDeferred
@@ -6,29 +6,27 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import org.dweb_browser.browser.BrowserI18nResource
+import org.dweb_browser.browser.jmm.JsMicroModule
+import org.dweb_browser.browser.jmm.debugJsMM
 import org.dweb_browser.browser.jsProcess.ext.JsProcess
 import org.dweb_browser.browser.jsProcess.ext.createJsProcess
 import org.dweb_browser.browser.kit.GlobalWebMessageEndpoint
-import org.dweb_browser.core.help.types.CommonAppManifest
-import org.dweb_browser.core.help.types.IpcSupportProtocols
 import org.dweb_browser.core.help.types.JmmAppInstallManifest
 import org.dweb_browser.core.help.types.MICRO_MODULE_CATEGORY
 import org.dweb_browser.core.help.types.MMID
-import org.dweb_browser.core.help.types.MicroModuleManifest
 import org.dweb_browser.core.http.router.HttpHandlerToolkit
 import org.dweb_browser.core.http.router.bindPrefix
 import org.dweb_browser.core.ipc.Ipc
 import org.dweb_browser.core.ipc.helper.IpcEvent
 import org.dweb_browser.core.module.BootstrapContext
 import org.dweb_browser.core.module.MicroModule
+import org.dweb_browser.core.module.NativeMicroModule
 import org.dweb_browser.core.module.connectAdapterManager
 import org.dweb_browser.core.std.dns.nativeFetch
 import org.dweb_browser.core.std.dns.nativeFetchAdaptersManager
 import org.dweb_browser.core.std.permission.PermissionProvider
 import org.dweb_browser.core.std.permission.ext.doRequestWithPermissions
 import org.dweb_browser.helper.Debugger
-import org.dweb_browser.helper.ImageResource
 import org.dweb_browser.helper.collectIn
 import org.dweb_browser.helper.printError
 import org.dweb_browser.pure.http.PureClientRequest
@@ -36,25 +34,14 @@ import org.dweb_browser.pure.http.PureMethod
 import org.dweb_browser.pure.http.PureRequest
 import org.dweb_browser.pure.http.PureResponse
 import org.dweb_browser.pure.http.PureStringBody
-import org.dweb_browser.sys.toast.ext.showToast
 
-val debugJsMM = Debugger("JsMM")
+val debugDApp = Debugger("dweb-app")
 
-open class JsMicroModule(val metadata: JmmAppInstallManifest) :
-  MicroModule(MicroModuleManifest().apply {
-    assign(metadata)
-    categories += MICRO_MODULE_CATEGORY.Application
-    icons.ifEmpty {
-      icons = listOf(ImageResource(src = metadata.logo))
-    }
-    mmid = metadata.id
-    ipc_support_protocols = IpcSupportProtocols(
-      cbor = true, protobuf = false, json = true
-    )
-    targetType = "jmm"
-  }) {
-  override fun toString(): String {
-    return "JMM($mmid)"
+
+class AppMicroModule(val metadata: JmmAppInstallManifest) : NativeMicroModule(metadata.id, metadata.name) {
+  init {
+    short_name = metadata.short_name
+    categories = listOf(MICRO_MODULE_CATEGORY.Service, MICRO_MODULE_CATEGORY.Render_Service)
   }
 
   companion object {
@@ -99,7 +86,7 @@ open class JsMicroModule(val metadata: JmmAppInstallManifest) :
       }
 
       nativeFetchAdaptersManager.append(order = 1) { fromMM, request ->
-        if (fromMM is JmmRuntime && request.href.startsWith("dweb:")) {
+        if (fromMM is AppMicroModule.AppRuntime && request.href.startsWith("dweb:")) {
           val toMM =
             fromMM.bootstrapContext.dns.queryDeeplink(request.href) ?: return@append PureResponse(
               HttpStatusCode.BadGateway, body = PureStringBody(request.href)
@@ -113,7 +100,7 @@ open class JsMicroModule(val metadata: JmmAppInstallManifest) :
         } else null
       }
       nativeFetchAdaptersManager.append(order = 1.1f) { fromMM, request ->
-        if (fromMM is JmmRuntime && request.url.protocol.name == "file" && request.url.host.endsWith(
+        if (fromMM is AppMicroModule.AppRuntime && request.url.protocol.name == "file" && request.url.host.endsWith(
             ".dweb"
           )
         ) {
@@ -130,10 +117,11 @@ open class JsMicroModule(val metadata: JmmAppInstallManifest) :
     }
   }
 
+
   override suspend fun getSafeDwebPermissionProviders() =
     this.dweb_permissions.mapNotNull { PermissionProvider.from(this, it, metadata.bundle_url) }
 
-  open inner class JmmRuntime(override val bootstrapContext: BootstrapContext) : Runtime() {
+  open inner class AppRuntime(override val bootstrapContext: BootstrapContext) : Runtime() {
     private val jsProcessDeferred = CompletableDeferred<JsProcess>()
     suspend fun getJsProcess() = jsProcessDeferred.await()
 
@@ -154,23 +142,8 @@ open class JsMicroModule(val metadata: JmmAppInstallManifest) :
     }
 
     private suspend fun startJsProcess() {
-      debugJsMM("bootstrap...") {
+      debugDApp("bootstrap...") {
         "$mmid/ minTarget:${metadata.minTarget} maxTarget:${metadata.maxTarget}"
-      }
-      val errorMessage = metadata.canSupportTarget(VERSION, disMatchMinTarget = {
-        BrowserI18nResource.JsMM.canNotSupportMinTarget
-      }, disMatchMaxTarget = {
-        BrowserI18nResource.JsMM.canNotSupportMaxTarget
-      })
-      errorMessage?.also { i18nMsg ->
-        scopeLaunch(cancelable = true) {
-          showToast(i18nMsg.text {
-            appId = mmid
-            currentVersion = VERSION
-            minTarget = metadata.minTarget
-            maxTarget = metadata.maxTarget ?: metadata.minTarget
-          })
-        }
       }
       val jsProcess = createJsProcess(metadata.server.entry, "$mmid-$short_name")
       jsProcessDeferred.complete(jsProcess)
@@ -317,20 +290,16 @@ open class JsMicroModule(val metadata: JmmAppInstallManifest) :
       super.beConnect(ipc, reason)
     }
 
-    suspend fun ipcBridge(fromMM: MicroModule) = getJsProcess().createIpc(fromMM.manifest)
+    internal suspend fun ipcBridge(fromMM: MicroModule) = getJsProcess().createIpc(fromMM.manifest)
 
     override suspend fun _shutdown() {
-      debugJsMM("shutdown $mmid") {}
+      debugDApp("shutdown $mmid") {}
       val jsProcess = getJsProcess()
       jsProcess.codeIpc.close()
     }
   }
 
-  override fun createRuntime(bootstrapContext: BootstrapContext) = JmmRuntime(bootstrapContext)
+  override fun createRuntime(bootstrapContext: BootstrapContext) = AppRuntime(bootstrapContext)
 
-  override val runtime get() = super.runtime as JmmRuntime
-
-  override fun toManifest(): CommonAppManifest {
-    return this.metadata.toCommonAppManifest()
-  }
+  override val runtime get() = super.runtime as AppRuntime
 }

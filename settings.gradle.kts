@@ -175,3 +175,4 @@ if (features.desktopApp.enabled) {
     includeApp("desktopApp")
   }
 }
+include(":dwebapp")

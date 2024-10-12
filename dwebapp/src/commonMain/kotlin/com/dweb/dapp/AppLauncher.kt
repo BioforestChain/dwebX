@@ -1,4 +1,4 @@
-package org.dweb_browser.browser
+package com.dweb.dapp
 
 import org.dweb_browser.browser.data.DataNMM
 import org.dweb_browser.browser.http.installDevRenderer
@@ -6,6 +6,7 @@ import org.dweb_browser.browser.jsProcess.JsProcessNMM
 import org.dweb_browser.browser.mwebview.MultiWebViewNMM
 import org.dweb_browser.browser.nativeui.torch.TorchNMM
 import org.dweb_browser.browser.scan.SmartScanNMM
+import org.dweb_browser.core.help.types.JmmAppInstallManifest
 import org.dweb_browser.core.module.MicroModule
 import org.dweb_browser.core.std.boot.BootNMM
 import org.dweb_browser.core.std.dns.DnsNMM
@@ -20,7 +21,6 @@ import org.dweb_browser.helper.compose.envSwitch
 import org.dweb_browser.sys.biometrics.BiometricsNMM
 import org.dweb_browser.sys.clipboard.ClipboardNMM
 import org.dweb_browser.sys.configure.ConfigNMM
-import org.dweb_browser.sys.contact.ContactNMM
 import org.dweb_browser.sys.device.DeviceNMM
 import org.dweb_browser.sys.filechooser.FileChooserNMM
 import org.dweb_browser.sys.haptics.HapticsNMM
@@ -81,7 +81,7 @@ class AppLauncher(
     httpNMM.installDevRenderer()
 
     val mediaCaptureNMM = MediaCaptureNMM().setup()
-    val contactNMM = ContactNMM().setup()
+//    val contactNMM = ContactNMM().setup()
     val shortcutNMM = ShortcutNMM().setup()
     /// 扫码
     val smartScanNMM = SmartScanNMM().setup()
@@ -126,8 +126,11 @@ class AppLauncher(
       }
     }
     val keyChainNMM = KeychainNMM().setup()
-//    val deskNMM = DeskNMM().setup()
+    val dwebApp = AppMicroModule(JmmAppInstallManifest(
+
+    ))
     val bootMmidList = mutableListOf(
+      dwebApp.mmid,
       deviceNMM.mmid, // 为了直接初始化设备ID
 //      shortcutNMM.mmid, // 为了启动时，注入快捷内容
       httpNMM.mmid,// 启动时，初始化 pingPong

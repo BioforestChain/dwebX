@@ -15,6 +15,7 @@ plugins {
 kotlin {
   kmpComposeTarget(project) {
     dependencies {
+      implementation(projects.dwebapp)
       implementation(projects.shared) // 用于导入 resources 文件夹
       implementation(projects.helper)
       implementation(projects.helperCompose)
@@ -80,13 +81,6 @@ android {
 
   signingConfigs {
     create("release") {
-// 使用 keytool -printcert -jarfile app_release.apk 直接打印 jar 签名信息
-// 使用 jarsigner --verify app_release.apk 提示"jar 已验证。"
-// 使用 apksigner verify -v app_release.apk 显示如下，V1 为false，但实际是有签名的。只有当minSdk改为<24的版本，这边的验证才会提现为true
-//    Verified using v1 scheme (JAR signing): false
-//    Verified using v2 scheme (APK Signature Scheme v2): true
-//    Verified using v3 scheme (APK Signature Scheme v3): false
-//    Verified using v3.1 scheme (APK Signature Scheme v3.1): false
       enableV1Signing = true
       enableV2Signing = true
       enableV3Signing = false
@@ -135,7 +129,7 @@ android {
       manifestPlaceholders["appName"] = "Dweb-$userName"
     }
 
-    manifestPlaceholders["appIcon"] = "@mipmap/ic_launcher_${channel}"
+    manifestPlaceholders["appIcon"] = "@mipmap/icon"
   }
 
   buildTypes {
@@ -162,7 +156,7 @@ android {
         configChannel(buildChannel, this)
         manifestPlaceholders["isTestOnly"] = "true"
       }
-      manifestPlaceholders["appIcon"] = "@mipmap/ic_launcher_debug"
+      manifestPlaceholders["appIcon"] = "@mipmap/icon"
       isDebuggable = true
     }
     create("benchmark") {

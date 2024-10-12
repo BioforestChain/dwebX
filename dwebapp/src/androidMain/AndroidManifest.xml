@@ -48,9 +48,5 @@
       android:theme="@style/Theme.dwebbrowser"
       android:windowSoftInputMode="adjustResize"
       tools:ignore="LockedOrientationActivity" />
-    <activity
-      android:name=".desk.TaskbarActivity"
-      android:exported="true"
-      android:theme="@style/Theme.DwebBrowser.Transparent" />
   </application>
 </manifest> 
